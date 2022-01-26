@@ -10,6 +10,7 @@
 const char binary_filename[] = "5_letter_words.bin";
 
 char *sim_answer = NULL;
+static bool is_letter_present[26] = { 0 };
 
 char *generate(char *word_list_filename, unsigned *num_words) {
     if (word_list_filename == NULL) {
@@ -75,6 +76,26 @@ bool is_letter_valid(uint32_t answer_map, char c) {
     return answer_map & char_to_bitmap(c);
 }
 
+///! @brief Check that the guess contains all the letters that are known to be in the word
+bool is_a_good_guess(char *guess) {
+    bool good_guess = false;
+    for (int i = 0; i < 26; i++) {
+        char letter = i + 'a';
+        if (is_letter_present[i]) {
+            good_guess = false;
+            for (int j = 0; j < WORDLE_LENGTH; j++) {
+                if (letter == guess[j]) {
+                    good_guess = true;
+                }
+            }
+            if (!good_guess) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool guess_word(char **words, unsigned *num_words, uint32_t *answer_map, char *guess) {
     bool have_guess;
     unsigned original_num_words = *num_words;
@@ -88,9 +109,14 @@ bool guess_word(char **words, unsigned *num_words, uint32_t *answer_map, char *g
             }
         }
         if (have_guess) {
+            // We have a word that isn't technically wrong
             memcpy(guess, *words, sizeof(char) * WORDLE_LENGTH);
-            printf("Guess: %s\n", guess);
-            break;
+            if (is_a_good_guess(guess)) {
+                printf("Guess: %s\n", guess);
+                break;
+            } else {
+                have_guess = false;
+            }
         }
     }
     return have_guess;
@@ -111,13 +137,20 @@ void update_answer_map(char *guess, char *response, uint32_t* answer_map) {
     for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
         switch (response[i]) {
         case 'g':
+            // The letter is in this location
+            // No need to keep track since all guesses will require this letter in this location
             answer_map[i] = char_to_bitmap(guess[i]);
             break;
         case 'y':
+            // The letter is not in this location
             answer_map[i] &= ~char_to_bitmap(guess[i]);
+            // But keep track of it so future guesses will contain it
+            is_letter_present[guess[i] - 'a'] = true;
             break;
         case 'b':
+            // If this is a repeat, it will counted as b, so ignore it. It has already been handled
             if (!repeat[i]) {
+                // This letter is not in the word, clear its bit in all locations
                 for (unsigned j = 0; j < WORDLE_LENGTH; j++) {
                     answer_map[j] &= ~char_to_bitmap(guess[i]);
                 }
@@ -169,7 +202,9 @@ void solve(char *words, unsigned num_words, bool is_sim) {
     }
     bool solved = false;
     bool have_guess = true;
+    int rounds = 0;
     while (!solved) {
+        rounds++;
         char guess[WORDLE_LENGTH + 1];
         guess[WORDLE_LENGTH] = '\0';
         have_guess = guess_word(&words, &num_words, answer_map, guess);
@@ -195,7 +230,7 @@ void solve(char *words, unsigned num_words, bool is_sim) {
         }
         update_answer_map(guess, response, answer_map);
     }
-    printf("Done!\n");
+    printf("Done! Took %d rounds\n", rounds);
 }
 
 void usage(void) {
