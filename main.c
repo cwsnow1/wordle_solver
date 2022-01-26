@@ -35,7 +35,7 @@ bool is_a_good_guess(char *guess) {
                     letter_count++;
                 }
             }
-            if (letter_count != known_letter_count[i]) {
+            if (letter_count < known_letter_count[i]) {
                 return false;
             }
         }
@@ -113,26 +113,19 @@ void update_answer_map(char *guess, char *response, uint32_t* answer_map) {
 }
 
 void get_sim_response(char *guess, char *response) {
-    bool repeat[WORDLE_LENGTH] = { false };
-    for (unsigned i = 0; i < WORDLE_LENGTH - 1; i++) {
-        for (unsigned j = i + 1; j < WORDLE_LENGTH; j++) {
-            if (i != j) {
-                if (guess[i] == guess[j]) {
-                    repeat[j] = true;
-                }
-            }
-        }
+    int real_letter_counts[26] = { 0 };
+    for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
+        real_letter_counts[sim_answer[i] - 'a']++;
     }
     for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
         response[i] = 'b';
         if (guess[i] == sim_answer[i]) {
             response[i] = 'g';
+            real_letter_counts[guess[i] - 'a']--;
         } else {
-            for (unsigned j = 0; j < WORDLE_LENGTH; j++) {
-                if (guess[i] == sim_answer[j] && !repeat[i]) {
-                    response[i] = 'y';
-                    break;
-                }
+            if (real_letter_counts[guess[i] - 'a']) {
+                response[i] = 'y';
+                real_letter_counts[guess[i] - 'a']--;
             }
         }
     }
@@ -144,6 +137,7 @@ void solve(char *words, unsigned num_words, bool is_sim) {
     printf("g - correct letter, correct position\n");
     printf("y - correct letter, wrong position\n");
     printf("b - wrong letter\n");
+    memset(known_letter_count, 0, 26 * sizeof(unsigned));
     uint32_t answer_map[WORDLE_LENGTH];
     for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
         answer_map[i] = (1 << 26) - 1;
@@ -225,11 +219,16 @@ int main(int argc, char **argv) {
         fread(words, sizeof(char), num_words * WORDLE_LENGTH, f);
         fclose(f);
     }
-    printf("Using list of %u %u-letter words\n", num_words, WORDLE_LENGTH);
-    sort_by_letter_frequency(words, num_words);
+    char *words_sorted_by_letter_frequency = (char*) malloc(sizeof(char) * num_words * WORDLE_LENGTH);
+    memcpy(words_sorted_by_letter_frequency, words, sizeof(char) * num_words * WORDLE_LENGTH);
+    sort_by_letter_frequency(words_sorted_by_letter_frequency, num_words);
 
     bool is_sim = sim_answer != NULL;
+    printf("Using list of %u %u-letter words, sorted by usage\n", num_words, WORDLE_LENGTH);
     solve(words, num_words, is_sim);
+
+    printf("Using list of %u %u-letter words, sorted by letter-position frequency (weighted for usage)\n", num_words, WORDLE_LENGTH);
+    solve(words_sorted_by_letter_frequency, num_words, is_sim);
     free(words);
 
     return 0;
