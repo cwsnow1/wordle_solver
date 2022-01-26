@@ -9,7 +9,7 @@
 #include "generator.h"
 
 char *sim_answer = NULL;
-static bool is_letter_present[26] = { 0 };
+static unsigned known_letter_count[26] = { 0 };
 const char binary_filename[] = "5_letter_words.bin";
 
 
@@ -26,17 +26,16 @@ bool is_letter_valid(uint32_t answer_map, char c) {
 
 ///! @brief Check that the guess contains all the letters that are known to be in the word
 bool is_a_good_guess(char *guess) {
-    bool good_guess = false;
     for (int i = 0; i < 26; i++) {
         char letter = i + 'a';
-        if (is_letter_present[i]) {
-            good_guess = false;
+        if (known_letter_count[i]) {
+            unsigned letter_count = 0;
             for (int j = 0; j < WORDLE_LENGTH; j++) {
                 if (letter == guess[j]) {
-                    good_guess = true;
+                    letter_count++;
                 }
             }
-            if (!good_guess) {
+            if (letter_count != known_letter_count[i]) {
                 return false;
             }
         }
@@ -60,14 +59,8 @@ bool guess_word(char **words, unsigned *num_words, uint32_t *answer_map, char *g
             // We have a word that isn't technically wrong
             memcpy(guess, *words, sizeof(char) * WORDLE_LENGTH);
             if (is_a_good_guess(guess)) {
-                printf("Guess: %s? (y/n)\n", guess);
-                char yn = 'n';
-                scanf("%c%*c", &yn);
-                if (yn == 'y') {
-                    break;
-                } else {
-                    have_guess = false;
-                }
+                printf("Guess: %s\n", guess);
+                break;
             } else {
                 have_guess = false;
             }
@@ -78,30 +71,31 @@ bool guess_word(char **words, unsigned *num_words, uint32_t *answer_map, char *g
 
 void update_answer_map(char *guess, char *response, uint32_t* answer_map) {
     bool repeat[WORDLE_LENGTH] = { false };
-    for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
-        for (unsigned j = 0; j < WORDLE_LENGTH; j++) {
-            if (i != j) {
-                if (guess[i] == guess[j]) {
-                    repeat[i] = true;
-                    repeat[j] = true;
-                }
+    for (unsigned i = 0; i < WORDLE_LENGTH - 1; i++) {
+        for (unsigned j = i + 1; j < WORDLE_LENGTH; j++) {
+            if (guess[i] == guess[j]) {
+                repeat[j] = true;
             }
         }
     }
+    memset(known_letter_count, 0, 26 * sizeof(unsigned));
     for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
         switch (response[i]) {
         case 'g':
+        case 'G':
             // The letter is in this location
-            // No need to keep track since all guesses will require this letter in this location
             answer_map[i] = char_to_bitmap(guess[i]);
+            known_letter_count[guess[i] - 'a']++;
             break;
         case 'y':
+        case 'Y':
             // The letter is not in this location
             answer_map[i] &= ~char_to_bitmap(guess[i]);
             // But keep track of it so future guesses will contain it
-            is_letter_present[guess[i] - 'a'] = true;
+            known_letter_count[guess[i] - 'a']++;
             break;
         case 'b':
+        case 'B':
             // If this is a repeat, it will counted as b, so ignore it. It has already been handled
             if (!repeat[i]) {
                 // This letter is not in the word, clear its bit in all locations
@@ -172,7 +166,7 @@ void solve(char *words, unsigned num_words, bool is_sim) {
             get_sim_response(guess, response);
         } else {
             printf("Enter response:\n");
-            scanf("%s", response);
+            scanf("%s%*c", response);
         }
         printf("Response: %s\n", response);
         solved = true;
@@ -232,9 +226,11 @@ int main(int argc, char **argv) {
         fclose(f);
     }
     printf("Using list of %u %u-letter words\n", num_words, WORDLE_LENGTH);
+    sort_by_letter_frequency(words, num_words);
 
     bool is_sim = sim_answer != NULL;
     solve(words, num_words, is_sim);
+    free(words);
 
     return 0;
 }
