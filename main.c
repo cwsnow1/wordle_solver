@@ -5,65 +5,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define WORDLE_LENGTH           (5)
-#define MAX_NUM_WORDS           (20000)
-const char binary_filename[] = "5_letter_words.bin";
+#include "cfg.h"
+#include "generator.h"
 
 char *sim_answer = NULL;
 static bool is_letter_present[26] = { 0 };
+const char binary_filename[] = "5_letter_words.bin";
 
-char *generate(char *word_list_filename, unsigned *num_words) {
-    if (word_list_filename == NULL) {
-        fprintf(stderr, "Please provide a word list as an argument\n");
-        exit(1);
-    }
-    FILE *word_list_f = fopen(word_list_filename, "r");
-    if (word_list_f == NULL) {
-        fprintf(stderr, "Error reading %s: %s\n", word_list_filename, strerror(errno));
-        exit(1);
-    }
-    char *word_buffer = (char*) malloc(sizeof(char) * MAX_NUM_WORDS * WORDLE_LENGTH);
-    char *word_buffer_ptr = word_buffer;
-    bool done = false;
-    *num_words = 0;
-    while (!done) {
-        char tmp_word[WORDLE_LENGTH];
-        for (int i = 0; i < WORDLE_LENGTH + 1; i++) {
-            char c = (char) getc(word_list_f);
-            if (c == EOF) {
-                done = true;
-                break;
-            }
-            if (i < WORDLE_LENGTH) {
-                if (c == '\n') {
-                    break;
-                } else if (c == '\r') {
-                    while (c != '\n') {
-                        c = (char) getc(word_list_f);
-                    }
-                    break;
-                }
-                tmp_word[i] = c;
-            } else {
-                if (c == '\n' || c == '\r') {
-                    memcpy(word_buffer_ptr, tmp_word, sizeof(char) * WORDLE_LENGTH);
-                    word_buffer_ptr += WORDLE_LENGTH;
-                    (*num_words)++;
-                } else {
-                    while ((c != '\n') && (c != EOF)) {
-                        c = (char) getc(word_list_f);
-                    }
-                }
-            }
-        }
-    }
-    fclose(word_list_f);
-    FILE *binary_f = fopen(binary_filename, "wb");
-    fwrite(num_words, sizeof(unsigned), 1, binary_f);
-    fwrite(word_buffer, sizeof(char), * num_words * WORDLE_LENGTH, binary_f);
-    fclose(binary_f);
-    return word_buffer;
-}
 
 uint32_t char_to_bitmap(char c) {
     if (c < 'a') {
@@ -112,8 +60,14 @@ bool guess_word(char **words, unsigned *num_words, uint32_t *answer_map, char *g
             // We have a word that isn't technically wrong
             memcpy(guess, *words, sizeof(char) * WORDLE_LENGTH);
             if (is_a_good_guess(guess)) {
-                printf("Guess: %s\n", guess);
-                break;
+                printf("Guess: %s? (y/n)\n", guess);
+                char yn = 'n';
+                scanf("%c%*c", &yn);
+                if (yn == 'y') {
+                    break;
+                } else {
+                    have_guess = false;
+                }
             } else {
                 have_guess = false;
             }
@@ -265,7 +219,7 @@ int main(int argc, char **argv) {
     unsigned num_words = 0;
     if (f == NULL) {
         printf("Binary list not found, generating from text file...\n");
-        words = generate(*argv, &num_words);
+        words = generate(*argv, &num_words, binary_filename);
         if (num_words == 0 || words == NULL) {
             fprintf(stderr, "Error in reading in words\n");
             exit(1);

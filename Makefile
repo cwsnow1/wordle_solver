@@ -26,7 +26,7 @@ CFLAGS = -Wall -g -Werror -pedantic
 # LIBS = -lpthread
 
 # define the C source files
-SRCS = ./main.c
+SRCS = ./main.c ./generator.c
 
 # define the C object files 
 #
