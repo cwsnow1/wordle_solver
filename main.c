@@ -96,12 +96,14 @@ void update_answer_map(char *guess, char *response, uint32_t* answer_map) {
             break;
         case 'b':
         case 'B':
-            // If this is a repeat, it will counted as b, so ignore it. It has already been handled
+            // If this is a repeat, it will counted as b, so only invalidate this spot. It has already been handled
             if (!repeat[i]) {
                 // This letter is not in the word, clear its bit in all locations
                 for (unsigned j = 0; j < WORDLE_LENGTH; j++) {
                     answer_map[j] &= ~char_to_bitmap(guess[i]);
                 }
+            } else {
+                answer_map[i] &= ~char_to_bitmap(guess[i]);
             }
             break;
         default:
@@ -117,12 +119,19 @@ void get_sim_response(char *guess, char *response) {
     for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
         real_letter_counts[sim_answer[i] - 'a']++;
     }
+    // Need 2 sweeps
+    // First get all the matches and decrement counters
+    // so that repeat letters that appear earlier in the
+    // word are not counted as yellow when they should be black
     for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
         response[i] = 'b';
         if (guess[i] == sim_answer[i]) {
             response[i] = 'g';
             real_letter_counts[guess[i] - 'a']--;
-        } else {
+        }
+    }
+    for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
+        if (guess[i] != sim_answer[i]) {
             if (real_letter_counts[guess[i] - 'a']) {
                 response[i] = 'y';
                 real_letter_counts[guess[i] - 'a']--;
