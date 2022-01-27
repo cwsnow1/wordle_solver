@@ -202,13 +202,21 @@ int main(int argc, char **argv) {
         usage();
         exit(1);
     }
+    bool is_sim;
     if (!strcmp(subcommand, "sim")) {
+        is_sim = true;
         sim_answer = *argv++;
         if (sim_answer == NULL) {
             fprintf(stderr, "Please provide an answer word for the sim\n");
             usage();
             exit(1);
         }
+    } else if (!strcmp(subcommand, "solve")) {
+        is_sim = false;
+    } else {
+        fprintf(stderr, "Unkown subcommand\n");
+        usage();
+        exit(1);
     }
 
     FILE *f = fopen(binary_filename, "rb");
@@ -232,13 +240,14 @@ int main(int argc, char **argv) {
     memcpy(words_sorted_by_letter_frequency, words, sizeof(char) * num_words * WORDLE_LENGTH);
     sort_by_letter_frequency(words_sorted_by_letter_frequency, num_words);
 
-    bool is_sim = sim_answer != NULL;
     printf("Using list of %u %u-letter words, sorted by usage\n", num_words, WORDLE_LENGTH);
     solve(words, num_words, is_sim);
 
     printf("Using list of %u %u-letter words, sorted by letter-position frequency (weighted for usage)\n", num_words, WORDLE_LENGTH);
     solve(words_sorted_by_letter_frequency, num_words, is_sim);
+
     free(words);
+    free(words_sorted_by_letter_frequency);
 
     return 0;
 }
