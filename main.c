@@ -236,18 +236,19 @@ int main(int argc, char **argv) {
         fread(words, sizeof(char), num_words * WORDLE_LENGTH, f);
         fclose(f);
     }
-    char *words_sorted_by_letter_frequency = (char*) malloc(sizeof(char) * num_words * WORDLE_LENGTH);
-    memcpy(words_sorted_by_letter_frequency, words, sizeof(char) * num_words * WORDLE_LENGTH);
-    sort_by_letter_frequency(words_sorted_by_letter_frequency, num_words);
 
     printf("Using list of %u %u-letter words, sorted by usage\n", num_words, WORDLE_LENGTH);
     solve(words, num_words, is_sim);
-
-    printf("Using list of %u %u-letter words, sorted by letter-position frequency (weighted for usage)\n", num_words, WORDLE_LENGTH);
-    solve(words_sorted_by_letter_frequency, num_words, is_sim);
+    if (is_sim) {
+        char *words_sorted_by_letter_frequency = (char*) malloc(sizeof(char) * num_words * WORDLE_LENGTH);
+        memcpy(words_sorted_by_letter_frequency, words, sizeof(char) * num_words * WORDLE_LENGTH);
+        sort_by_letter_frequency(words_sorted_by_letter_frequency, num_words);
+        printf("Using list of %u %u-letter words, sorted by letter-position frequency (weighted for usage)\n", num_words, WORDLE_LENGTH);
+        solve(words_sorted_by_letter_frequency, num_words, is_sim);
+        free(words_sorted_by_letter_frequency);
+    }
 
     free(words);
-    free(words_sorted_by_letter_frequency);
 
     return 0;
 }
