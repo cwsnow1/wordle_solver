@@ -167,11 +167,11 @@ void solve(char *words, unsigned num_words, bool is_sim) {
         response[WORDLE_LENGTH] = '\0';
         if (is_sim) {
             get_sim_response(guess, response);
+            printf("Response: %s\n", response);
         } else {
             printf("Enter response:\n");
             scanf("%s%*c", response);
         }
-        printf("Response: %s\n", response);
         solved = true;
         for (unsigned i = 0; i < WORDLE_LENGTH; i++) {
             if (response[i] != 'g') {
@@ -181,7 +181,7 @@ void solve(char *words, unsigned num_words, bool is_sim) {
         }
         update_answer_map(guess, response, answer_map);
     }
-    printf("Done! Took %d rounds\n", rounds);
+    printf("Done! Took %d rounds\n\n", rounds);
 }
 
 void usage(void) {

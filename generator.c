@@ -17,9 +17,11 @@ void sort_by_letter_frequency(char *buffer, unsigned num_words) {
             letter_position_frequency[j][buffer[j] - 'a'] += weight;
         }
     }
+    printf("\n============================================================================================================\n");
+    printf("Frequency of each letter in each position in word. Weighted for word frequency (if the input list is sorted)\n");
     printf("Position  ");
     for (int i = 0; i < 26; i++) {
-        printf("%c     ", (char)('a' + i));
+        printf("   %c  ", (char)('a' + i));
     }
     printf("\n");
     for (int i = 0; i < WORDLE_LENGTH; i++) {
@@ -29,6 +31,7 @@ void sort_by_letter_frequency(char *buffer, unsigned num_words) {
         }
         printf("\n");
     }
+    printf("\n============================================================================================================\n\n");
     // 2. Score each word in list for letter frequency
     float *scores = (float*) malloc(sizeof(float) * num_words);
     buffer = original_buffer;
