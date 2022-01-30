@@ -32,13 +32,21 @@ void sort_by_letter_frequency(char *buffer, unsigned num_words) {
         printf("\n");
     }
     printf("\n============================================================================================================\n\n");
-    // 2. Score each word in list for letter frequency
+    // 2. Score each word in list for letter frequency, bias for words with more unique letters
     float *scores = (float*) malloc(sizeof(float) * num_words);
     buffer = original_buffer;
     for (unsigned i = 0; i < num_words; i++, buffer += WORDLE_LENGTH) {
+        bool is_letter_used[26] = { false };
+        float unique_letters = 0;
         for (unsigned j = 0; j < WORDLE_LENGTH; j++) {
             scores[i] += letter_position_frequency[j][buffer[j] - 'a'];
+            if (!is_letter_used[buffer[j] - 'a']) {
+                unique_letters++;
+                is_letter_used[buffer[j] - 'a'] = true;
+            }
         }
+        // Bias for number of unique letters
+        scores[i] *= unique_letters;
     }
     // 3. Sort by scores
     char *buffer_copy = (char*) malloc(sizeof(char) * num_words * WORDLE_LENGTH);
